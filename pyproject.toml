@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools >= 61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "wfssbackground"
+version = "1.0.0"
+#dynamic = ["version"]
+license = {file = 'LICENSE.rst'}
+dependencies = [
+  "astropy >= 6.0.0",
+  "matplotlib >= 3.8.2",
+  "numpy >= 1.26.0, < 2", 
+  "scipy >= 1.14.0"
+]
+
+requires-python = ">3.11"
+authors = [
+  {name = "Russell Ryan", email = "rryan@stsci.edu"},
+]
+maintainers = [
+  {name = "Russell Ryan", email = "rryan@stsci.edu"},
+]
+
+description = "package to do background subtraction of WFSS"
+readme = "README.md"
+keywords = ["JWST", "NIRISS", "NIRCam", "WFSS", "background", "1/f"]
+classifiers = [
+  "Intended Audience :: Science/Research",
+  "Topic :: Scientific/Engineering :: Astronomy",
+]
