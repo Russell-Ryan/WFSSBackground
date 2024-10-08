@@ -396,7 +396,7 @@ class WFSSBackground:
 
     def update_objmask(self, model, nsigma=3., min_size=64, outfile=None):
         
-        res = (self.sci-model)/self.unc #*np.sqrt(self.wht)#/self.pfl
+        res = (self.sci-model)/self.unc
         new = (res>=nsigma)
 
         new = morphology.remove_small_objects(new, min_size=3)
@@ -408,18 +408,7 @@ class WFSSBackground:
 
         new = new | self.obj
         
-        #new = morphology.remove_small_objects(new, min_size=min_size)
-
-        #fig, ax = plt.subplots(2,2, figsize=(8,8), layout='constrained',
-        #                       sharex=True, sharey=True)
-        #ax[0,0].imshow(self.obj.astype(int))
-        #ax[0,1].imshow(new.astype(int))
-        #ax[1,0].imshow(res, vmin=0, vmax=3)
-        #
-        #ax[0,0].set_xlim(500,600)
-        #ax[0,0].set_ylim(500,600)
-        #plt.show()
-        
+         
         if isinstance(outfile, str):
             pass
         self.obj = new
