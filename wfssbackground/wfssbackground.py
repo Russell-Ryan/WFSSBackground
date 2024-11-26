@@ -34,6 +34,7 @@ class WFSSBackground:
         with fits.open(self.scifile, mode='readonly') as hdul:
             h0 = hdul[0].header
             self.ins = get_instrument(h0['INSTRUME'])
+            self.kern = self.ins.get_kernel(h0)
             
             # read the images
             self.sci = hdul[self.ins.sciext].data
@@ -41,7 +42,6 @@ class WFSSBackground:
             dqa = hdul[self.ins.dqaext].data
 
         # find the object mask?
-        
         if isinstance(objfile, str):
             self.obj = fits.getdata(objfile)
         else:
@@ -51,7 +51,7 @@ class WFSSBackground:
         self.sky, self.skyfile = self.load_reffile(skyfile, h0, 'R_WFSSBCK')
 
         # load the PFL image
-        self.pfl, self.pflfile = self.load_reffile(pflfile, h0, 'R_FFLAT')
+        self.pfl, self.pflfile = self.load_reffile(pflfile, h0, 'R_FLAT')
         
         # find the nans
         nan = np.isnan(self.sci) | np.isnan(self.unc) | np.isnan(self.sky)
@@ -99,7 +99,7 @@ class WFSSBackground:
             
                 basename = os.path.basename(filename)
                 locpath = (os.environ['CRDS_PATH'], 'references', tel, ins)
-                locfile = os.path.join(*locpath)+basename
+                locfile = os.path.join(*locpath)+os.sep+basename
 
                 if not os.path.exists(locfile):
                     try:
@@ -267,7 +267,7 @@ class WFSSBackground:
             # doing the standard master sky
                 
             num = np.nansum(wht[self.ins.scipix]*self.sci[self.ins.scipix]*self.sky[self.ins.scipix])
-            den = np.nansum(wht[self.ins.scipix]*self.sky[self.ins.scipix]**2)
+            den = np.nansum(wht[self.ins.scipix]*self.sky[self.ins.scipix]*self.sky[self.ins.scipix])
             alpha = num/den
 
             fast = np.full_like(self.sci, np.nan, dtype=float)
@@ -394,22 +394,23 @@ class WFSSBackground:
         print(f'     ndof = {self.results["ndof"][0]}')
         print('')
 
-    def update_objmask(self, model, nsigma=3., min_size=64, outfile=None):
+    def update_objmask(self, model, nsigma=3., min_size=16, outfile=None):
         
         res = (self.sci-model)/self.unc
         new = (res>=nsigma)
 
-        new = morphology.remove_small_objects(new, min_size=3)
-        
-        # horizontal mask
-        footprint = morphology.rectangle(3, 15)
+        new = morphology.remove_small_objects(new, min_size=min_size)
 
+        # horizontal mask
+        footprint = morphology.rectangle(*self.kern)
         new = morphology.binary_dilation(new, footprint=footprint)
 
-        new = new | self.obj
+
+        # update the mask
+        self.obj = new | self.obj
         
-         
         if isinstance(outfile, str):
-            pass
-        self.obj = new
+            fits.writeto(outfile, self.obj.astype(int), overwrite=True)
+            
+        
 

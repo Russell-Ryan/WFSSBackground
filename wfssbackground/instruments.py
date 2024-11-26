@@ -23,6 +23,12 @@ class NIRCam(Instrument):
     
     fastaxis = 1
 
+    def get_kernel(self, hdr):
+        if hdr['PUPIL'] == 'GRISMR':
+            return (3, 15)
+        else:
+            return (15, 3)
+
     def fast(self):
         for pix in self.channels.values():
             yield self.scipix[0], pix, pix.start, pix.stop
@@ -42,6 +48,10 @@ class NIRISS(Instrument):
     dqaext = ('DQ', 1)
     
     fastaxis = 0
+
+    def get_kernel(self, hdr):
+        raise NotImplementedError
+
     
     def fast(self):
         for pix in self.channels.values():
