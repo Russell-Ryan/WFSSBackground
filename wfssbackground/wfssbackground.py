@@ -1,6 +1,7 @@
 import importlib.metadata as im
 import os
 import shutil
+from timeit import default_timer
 import warnings
 
 from astropy.io import fits
@@ -22,8 +23,8 @@ class WFSSBackground:
     def __init__(self, scifile, objfile=None, skyfile=None, pflfile=None,
                  bitmask=65535):
         self.bitmask = bitmask
-        
-        self.load_data(scifile, objfile, skyfile, pflfile)
+        if scifile is not None:
+            self.load_data(scifile, objfile, skyfile, pflfile)
         self.results = {}
         
     def load_data(self, scifile, objfile, skyfile, pflfile):
@@ -63,10 +64,10 @@ class WFSSBackground:
         self.wht = gpx/np.maximum(self.unc, 1e-10)**2
 
         # set the nans
-        g = np.where(nan)
-        self.sci[g] = 0.
-        self.wht[g] = 0.
-        self.sky[g] = 0.
+        self.nanxy = np.where(nan)
+        self.sci[self.nanxy] = 0.
+        self.wht[self.nanxy] = 0.
+        self.sky[self.nanxy] = 0.
 
     @property
     def obj(self):
@@ -137,7 +138,6 @@ class WFSSBackground:
     def fit_model(self, fit_oof=True, fit_slow=True, combine=True, repval=0.,
                   verbose=True, write=False, outfile=None):
         ''' do the model fitting '''
-        
         wht = np.logical_not(self.obj)*self.wht
 
         if fit_oof:
@@ -198,7 +198,7 @@ class WFSSBackground:
 
                 # update index counter
                 k += self.ins.npix
-
+                
             # do the terms for slow-read if requested
             if fit_slow:
                 k0 = nalpha+nbeta
@@ -215,17 +215,17 @@ class WFSSBackground:
                 
                 # constraint terms
                 A[npars+1, k] = self.ins.npix
-
+                
             # remove empty rows if they exist
             emptyrows = np.argwhere(np.all(A==0, axis=1)).flatten()
             if emptyrows.size > 0:
                 b = np.delete(b, emptyrows, axis=0)
                 A = np.delete(A, emptyrows, axis=0)
                 A = np.delete(A, emptyrows, axis=1)
-
             # solve the sparse least-squares problem
-            results = sparse.linalg.lsqr(A, b, damp=0.0)
 
+            results = sparse.linalg.lsqr(A, b, damp=0.0)
+        
             # solution vector
             x = results[0]
             istop = results[1]
@@ -234,7 +234,7 @@ class WFSSBackground:
             if emptyrows.size > 0:
                 insidx = emptyrows-np.arange(emptyrows.size, dtype=int)
                 x = np.insert(x, insidx, repval, axis=0)
- 
+
             # get the solution vector
             alpha = x[0]
             beta = x[nalpha:nalpha+nbeta]
